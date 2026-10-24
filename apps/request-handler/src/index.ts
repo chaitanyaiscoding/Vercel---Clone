@@ -1,3 +1,3 @@
-import { DEPLOY_QUEUE } from "@repo/shared";
+import { DEPLOY_STREAM } from "@repo/shared";
 
-console.log(`[request-handler] booted, queue = ${DEPLOY_QUEUE}`);
+console.log(`[request-handler] booted, stream = ${DEPLOY_STREAM}`);

@@ -5,3 +5,12 @@ export interface DeployJob {
   repoUrl: string;  // https://github.com/owner/repo
   sha: string;      // exact commit to build
 }
+
+export interface Deployment {
+  id: string;
+  repoUrl: string;
+  sha: string;
+  status: DeploymentStatus;
+  createdAt: string; // ISO timestamp
+  error?: string; // only set when status is "failed"
+}

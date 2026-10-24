@@ -10,6 +10,8 @@ POST /deploy ──► zod validate ──► parse owner/repo ──► GitHub 
                                     BullMQ queue.add("deploy", { id, repoUrl, sha })  ──► 202 { id }
 ```
 
+> **Update:** BullMQ was replaced with raw **Redis Streams**. The upload-service publishes with `MULTI` → `HSET deployment:<id>` + `XADD deploy:stream`. Wherever this doc says BullMQ/`queue.add`, read `enqueueDeployment()` in `src/queue.ts`. Stream names live in `@repo/shared` (`DEPLOY_STREAM`, `DEPLOY_CONSUMER_GROUP`).
+
 ---
 
 ## 1.1 Install dependencies
