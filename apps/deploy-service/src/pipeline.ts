@@ -8,10 +8,10 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { DeployJob } from "@repo/shared";
+import { deploymentFilesPrefix, type DeployJob } from "@repo/shared";
 import { runBuild } from "./docker";
 import { BuildError } from "./errors";
-import { deploymentPrefix, uploadDir } from "./s3";
+import { uploadDir } from "./s3";
 import { createLogSink, getStatus, setStatus } from "./status";
 
 export async function processJob(job: DeployJob) {
@@ -40,7 +40,7 @@ export async function processJob(job: DeployJob) {
 
     await setStatus(job.id, "uploading");
     logs.push("→ uploading output");
-    const count = await uploadDir(workDir, deploymentPrefix(job.id));
+    const count = await uploadDir(workDir, deploymentFilesPrefix(job.id));
     logs.push(`✓ uploaded ${count} files`);
 
     await setStatus(job.id, "deployed");

@@ -24,8 +24,6 @@ interface OutputFile {
   size: number;
 }
 
-export const deploymentPrefix = (id: string) => `dist/${id}/`;
-
 async function collectFiles(dir: string, prefix: string): Promise<OutputFile[]> {
   const entries = await fs.promises.readdir(dir, { recursive: true, withFileTypes: true });
   const files: OutputFile[] = [];

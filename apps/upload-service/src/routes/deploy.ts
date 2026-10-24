@@ -5,17 +5,21 @@
  */
 import { Router } from "express";
 import { customAlphabet } from "nanoid";
-import { deployRequestSchema, deploymentKey, MAX_REPO_SIZE, type Deployment } from "@repo/shared";
+import {
+  DEPLOYMENT_ID_ALPHABET,
+  DEPLOYMENT_ID_LENGTH,
+  DEPLOYMENT_ID_REGEX,
+  deployRequestSchema,
+  deploymentKey,
+  MAX_REPO_SIZE,
+  type Deployment,
+} from "@repo/shared";
 import { HttpError } from "../errors";
 import { getLatestSha, getRepoInfo, parseRepoUrl } from "../github";
 import { enqueueDeployment } from "../queue";
 import { redis } from "../redis";
 
-// Lowercase only: the id becomes a subdomain, and DNS is case-insensitive
-const ID_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz";
-const ID_LENGTH = 10;
-const generateId = customAlphabet(ID_ALPHABET, ID_LENGTH);
-const ID_REGEX = new RegExp(`^[0-9a-z]{${ID_LENGTH}}$`);
+const generateId = customAlphabet(DEPLOYMENT_ID_ALPHABET, DEPLOYMENT_ID_LENGTH);
 
 export const deployRouter = Router();
 
@@ -48,7 +52,7 @@ deployRouter.post("/deploy", async (req, res) => {
 
 deployRouter.get("/status/:id", async (req, res) => {
   const { id } = req.params;
-  if (!ID_REGEX.test(id)) throw new HttpError(400, "Invalid deployment id");
+  if (!DEPLOYMENT_ID_REGEX.test(id)) throw new HttpError(400, "Invalid deployment id");
 
   // Redis returns {} for a missing key, not null
   const record = await redis.hgetall(deploymentKey(id));
