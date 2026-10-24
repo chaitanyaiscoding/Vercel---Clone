@@ -43,14 +43,18 @@ export async function processJob(job: DeployJob) {
     const count = await uploadDir(workDir, deploymentFilesPrefix(job.id));
     logs.push(`✓ uploaded ${count} files`);
 
+    // Flush logs BEFORE the final status: clients stop polling once they see
+    // "deployed"/"failed", so every line must already be readable by then.
+    await logs.close();
     await setStatus(job.id, "deployed");
   } catch (err) {
     if (!(err instanceof BuildError)) throw err; // infrastructure → let the caller retry
 
     logs.push(`✗ ${err.message}`);
+    await logs.close();
     await setStatus(job.id, "failed", err.message);
   } finally {
-    await logs.close();
+    await logs.close(); // no-op if already closed; covers the infra-error path
     await fs.promises.rm(workDir, { recursive: true, force: true });
   }
 }

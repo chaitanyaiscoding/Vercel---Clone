@@ -1,159 +1,68 @@
-# Turborepo starter
+# vercel-clone
 
-This Turborepo starter is maintained by the Turborepo core team.
+Paste a public GitHub repo, and it gets built in an isolated Docker container and hosted at its own subdomain. A learning project that rebuilds the core of Vercel's deploy pipeline.
 
-## Using this example
+![Web UI after a successful deploy](docs/images/web-deployed.png)
 
-Run the following command:
+## How it works
 
-```sh
-npx create-turbo@latest
+```text
+web ──► upload-service ──► Redis stream ──► deploy-service ──► builder container (untrusted)
+                                                  │                    │ download @ sha → install → build
+                                                  └──── upload ───► S3 dist/<id>/
+browser ──► <id>.localhost:3001 ──► request-handler ──► S3
 ```
 
-## What's inside?
+- **upload-service** validates the repo with the GitHub API, pins the exact commit SHA, and queues a job.
+- **deploy-service** builds each job in a locked-down throwaway container (no secrets, CPU/memory/time limits), then uploads the static output to S3.
+- **request-handler** serves each deployment from S3 by subdomain, with SPA fallback and caching.
+- **web** is the UI: deploy, watch live build logs, open the site.
 
-This Turborepo includes the following packages/apps:
+Full diagrams and design decisions: **[docs/architecture.md](docs/architecture.md)**.
 
-### Apps and Packages
+## Stack
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `@next/eslint-plugin-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+Turborepo · pnpm · TypeScript · Node 24 · Express 5 · Redis Streams (ioredis) · Docker · AWS S3 · Vite + React 19 · zod
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+## Run it locally
 
-### Utilities
+Prerequisites: Node 24+, pnpm, Docker Desktop, an S3 bucket and an IAM user that can read/write it.
 
-This Turborepo has some additional tools already setup for you:
+```powershell
+pnpm install
+docker compose up -d                              # Redis
+pnpm --filter deploy-service builder:build        # the build sandbox image
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+# create .env files from the examples and fill in AWS values
+copy apps\upload-service\.env.example  apps\upload-service\.env
+copy apps\deploy-service\.env.example  apps\deploy-service\.env
+copy apps\request-handler\.env.example apps\request-handler\.env
 
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo build
+pnpm dev                                          # starts all four apps
 ```
 
-Without global `turbo`, use your package manager:
+Then open http://localhost:3000.
 
-```sh
-cd my-turborepo
-npx turbo build
-pnpm exec turbo build
-pnpm exec turbo build
-```
+| App | URL |
+|---|---|
+| web | http://localhost:3000 |
+| upload-service | http://localhost:3002 |
+| request-handler | http://&lt;id&gt;.localhost:3001 |
+| deploy-service | (background worker) |
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+## Limits (v1)
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+- Public GitHub repos only, up to 100 MB.
+- Static frontends only (Vite, CRA, etc.): the build must produce `dist/`, `build/` or `out/` with an `index.html`.
+- Builds: 1 CPU, 1 GB RAM, 10-minute timeout.
 
-```sh
-turbo build --filter=docs
-```
+## Docs
 
-Without global `turbo`:
-
-```sh
-npx turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
-
-### Develop
-
-To develop all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo dev
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo dev
-pnpm exec turbo dev
-pnpm exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo dev --filter=web
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-pnpm exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-pnpm exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+| Doc | Contents |
+|---|---|
+| [architecture.md](docs/architecture.md) | system, deploy flow, queue, serving, data layout, production plan |
+| [phase-0.md](docs/phase-0.md) | monorepo + local infrastructure |
+| [phase-1.md](docs/phase-1.md) | upload-service |
+| [phase-2.md](docs/phase-2.md) | deploy-service + build sandbox |
+| [phase-3.md](docs/phase-3.md) | request-handler |
+| [phase-4.md](docs/phase-4.md) | web frontend |

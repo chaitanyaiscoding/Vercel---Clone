@@ -4,8 +4,8 @@ How the Vercel clone works end to end: what each service does, how a deploy flow
 through the system, and how a deployed site is served. Diagrams are Mermaid, so
 they render on GitHub and in VS Code's Markdown preview.
 
-> Status: Phases 0–3 are implemented (upload-service, deploy-service, request-handler).
-> The web frontend (Phase 4) and production hosting (Phase 5) are planned and drawn dashed.
+> Status: Phases 0–4 are implemented (upload-service, deploy-service, request-handler, web).
+> Production hosting (Phase 5) is planned and drawn dashed.
 
 ---
 
@@ -17,7 +17,7 @@ flowchart LR
 
     subgraph trusted["Our infrastructure (trusted)"]
         direction TB
-        web["web<br/>Next.js frontend<br/>:3000 (Phase 4)"]
+        web["web<br/>Vite + React<br/>:3000"]
         upload["upload-service<br/>Express API<br/>:3002"]
         deploy["deploy-service<br/>stream worker"]
         handler["request-handler<br/>Express<br/>:3001"]
@@ -35,9 +35,8 @@ flowchart LR
         npm["npm registry"]
     end
 
-    user -. "paste repo URL" .-> web
-    web -. "POST /deploy, GET /status/:id" .-> upload
-    user -- "POST /deploy, GET /status/:id" --> upload
+    user -- "paste repo URL" --> web
+    web -- "POST /deploy<br/>GET /status/:id (+ /logs)" --> upload
     upload -- "repo public? size? → commit SHA" --> ghapi
     upload -- "MULTI: HSET record + XADD job" --> redis
 
@@ -52,8 +51,6 @@ flowchart LR
     handler -- "status lookup (cached)" --> redis
     handler -- "GetObject / HeadObject" --> s3
 
-    classDef planned stroke-dasharray: 5 5
-    class web planned
     classDef danger fill:#3b0d0d,stroke:#f87171,color:#fecaca
     class builder danger
 ```
@@ -62,7 +59,7 @@ flowchart LR
 
 | Service | Port | Role | Talks to |
 |---|---|---|---|
-| **web** *(Phase 4)* | 3000 | UI: paste a repo URL, watch status + logs, get the link | upload-service |
+| **web** | 3000 | UI: paste a repo URL, watch status + live logs, get the link | upload-service |
 | **upload-service** | 3002 | Validate the repo, pin the commit SHA, record + enqueue the deployment | GitHub API, Redis |
 | **deploy-service** | — | Worker: build each job in a sandbox, upload output, update status | Redis, Docker, S3 |
 | **request-handler** | 3001 | Serve `<id>.<domain>` from S3 | Redis, S3 |
@@ -85,7 +82,7 @@ flowchart LR
 ```mermaid
 sequenceDiagram
     autonumber
-    actor U as User
+    actor U as User (web UI)
     participant UP as upload-service
     participant GH as GitHub API
     participant R as Redis
@@ -102,10 +99,13 @@ sequenceDiagram
     UP->>R: MULTI → HSET deployment:id {status queued} + XADD deploy:stream {id, repoUrl, sha} → EXEC
     UP-->>U: 202 {id, status queued}
 
-    loop every few seconds
+    loop every 2 s until deployed or failed
         U->>UP: GET /status/:id
         UP->>R: HGETALL deployment:id
-        UP-->>U: current status
+        UP-->>U: status + site url
+        U->>UP: GET /status/:id/logs?from=next
+        UP->>R: HGET logCount + LLEN + LRANGE
+        UP-->>U: only the new log lines + next
     end
 
     W->>R: XREADGROUP (blocks until a job arrives)
@@ -223,8 +223,8 @@ Caching strategy (set by deploy-service at upload, forwarded by request-handler)
 
 | Key | Type | Written by | Read by | Contents |
 |---|---|---|---|---|
-| `deployment:<id>` | hash | upload-service, deploy-service | upload-service, request-handler | `id, repoUrl, sha, status, createdAt, updatedAt, error?` |
-| `deployment:<id>:logs` | list | deploy-service | (web, Phase 4) | last 1000 build log lines, 7-day TTL |
+| `deployment:<id>` | hash | upload-service, deploy-service | upload-service, request-handler | `id, repoUrl, sha, status, createdAt, updatedAt, error?, logCount` |
+| `deployment:<id>:logs` | list | deploy-service | upload-service (`GET /status/:id/logs`) | last 1000 build log lines, 7-day TTL. `logCount` = total ever written, so clients page by absolute line number even after trimming |
 | `deploy:stream` | stream | upload-service | deploy-service | `{id, repoUrl, sha}` per entry |
 
 ### S3 (`vercel-clone-chaitanya`, us-east-1)
@@ -247,7 +247,7 @@ apps/
   upload-service/    Express API: POST /deploy, GET /status/:id
   deploy-service/    stream worker + builder/ (Dockerfile, build.sh)
   request-handler/   serves <id>.<BASE_DOMAIN> from S3
-  web/               (Phase 4) Next.js frontend
+  web/               Vite + React frontend
 packages/
   shared/            constants, types, zod schemas, stream encoding
   typescript-config/ shared tsconfig presets
@@ -265,7 +265,7 @@ flowchart LR
     user(["Users"]) --> dns["DNS<br/>app.example.com<br/>*.example-sites.com"]
     dns --> cf["CloudFront CDN"]
     cf --> alb["Application Load Balancer"]
-    alb --> webp["web<br/>(ECS / Vercel)"]
+    alb --> webp["web<br/>(static: S3 + CloudFront,<br/>or deployed by itself!)"]
     alb --> upp["upload-service<br/>(ECS Fargate)"]
     alb --> rhp["request-handler<br/>(ECS Fargate)"]
     upp --> ec["ElastiCache Redis"]

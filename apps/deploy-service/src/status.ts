@@ -2,7 +2,8 @@
  * Reads and writes a deployment's user-visible state in Redis.
  * - setStatus / getStatus: the `deployment:<id>` hash that GET /status/:id returns.
  * - createLogSink: buffers build log lines and appends them to the capped list
- *   `deployment:<id>:logs` once a second, instead of one Redis call per line.
+ *   `deployment:<id>:logs` once a second, instead of one Redis call per line,
+ *   and keeps the total line count in the `logCount` field of the record.
  */
 import { deploymentKey, deploymentLogsKey, type DeploymentStatus } from "@repo/shared";
 import { redis } from "./redis";
@@ -38,6 +39,9 @@ export function createLogSink(id: string) {
       .rpush(key, ...lines)
       .ltrim(key, -MAX_LOG_LINES, -1) // keep only the newest lines
       .expire(key, LOG_TTL_SECONDS)
+      // Total lines ever written. Trimming shifts list positions, so readers page
+      // through logs by this absolute count instead (see GET /status/:id/logs).
+      .hincrby(deploymentKey(id), "logCount", lines.length)
       .exec();
   }
 

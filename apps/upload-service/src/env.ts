@@ -16,6 +16,11 @@ const envSchema = z.object({
     .optional()
     .transform((v) => v || undefined),
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
+  // Public address of a deployed site; "{id}" is replaced with the deployment id
+  SITE_URL_TEMPLATE: z
+    .string()
+    .default("http://{id}.localhost:3001")
+    .refine((t) => t.includes("{id}"), "must contain {id}"),
 });
 
 const parsed = envSchema.safeParse(process.env);
