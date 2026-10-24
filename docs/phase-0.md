@@ -102,8 +102,8 @@ packages/shared/
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
-    "@types/node": "^22",
-    "typescript": "^5"
+    "@types/node": "^24",
+    "typescript": "7.0.2"
   }
 }
 ```
@@ -176,10 +176,10 @@ apps/<name>/
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
-    "@types/node": "^22",
+    "@types/node": "^24",
     "tsup": "^8",
     "tsx": "^4",
-    "typescript": "^5"
+    "typescript": "7.0.2"
   }
 }
 ```
@@ -201,7 +201,7 @@ import { defineConfig } from "tsup";
 export default defineConfig({
   entry: ["src/index.ts"],
   format: ["esm"],
-  target: "node20",
+  target: "node24",
   clean: true,
   noExternal: ["@repo/shared"],
 });
@@ -214,6 +214,8 @@ import { DEPLOY_QUEUE } from "@repo/shared";
 
 console.log(`[upload-service] booted, queue = ${DEPLOY_QUEUE}`);
 ```
+
+> pnpm 11 blocks dependency install scripts by default. `tsx` and `tsup` need esbuild's, so run `pnpm approve-builds esbuild` once (it adds `allowBuilds: esbuild: true` to `pnpm-workspace.yaml`).
 
 Create an empty `.env` next to `.env.example` in each app (Node's `--env-file` errors if the file is missing).
 
