@@ -1,3 +1,8 @@
+/**
+ * Shared TypeScript types for a deployment.
+ * - DeployJob: the message published to the deploy stream (what a worker needs to build).
+ * - Deployment: the record stored at `deployment:<id>` in Redis (what the user sees via /status).
+ */
 export type DeploymentStatus = "queued" | "building" | "uploading" | "deployed" | "failed";
 
 export interface DeployJob {
@@ -12,5 +17,6 @@ export interface Deployment {
   sha: string;
   status: DeploymentStatus;
   createdAt: string; // ISO timestamp
+  updatedAt?: string; // ISO timestamp of the last status change
   error?: string; // only set when status is "failed"
 }

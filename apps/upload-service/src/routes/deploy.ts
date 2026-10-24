@@ -1,3 +1,8 @@
+/**
+ * HTTP routes for deployments.
+ * POST /deploy       → validate repo, pin commit SHA, record + enqueue, respond 202 { id }.
+ * GET  /status/:id   → return the deployment record from Redis.
+ */
 import { Router } from "express";
 import { customAlphabet } from "nanoid";
 import { deployRequestSchema, deploymentKey, MAX_REPO_SIZE, type Deployment } from "@repo/shared";

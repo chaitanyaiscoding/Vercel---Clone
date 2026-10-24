@@ -1,3 +1,8 @@
+/**
+ * Redis connection for the upload-service.
+ * Exports the shared client (status records + publishing jobs) and
+ * assertRedisReachable(), a fail-fast connectivity check run at boot.
+ */
 import { Redis } from "ioredis";
 import { env } from "./env";
 

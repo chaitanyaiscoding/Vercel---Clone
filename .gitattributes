@@ -1,0 +1,5 @@
+# Normalize line endings. Shell scripts and Dockerfiles must stay LF: they run
+# inside Linux containers, where CRLF breaks them ("/bin/sh^M: not found").
+* text=auto
+*.sh text eol=lf
+Dockerfile text eol=lf

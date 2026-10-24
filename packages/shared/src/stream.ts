@@ -1,13 +1,21 @@
+/**
+ * Encode/decode helpers for deploy-stream entries.
+ * Redis Streams store each entry as a flat list of strings; these helpers turn a
+ * DeployJob into that list (producer) and validate it back into a DeployJob (consumer).
+ */
 import { z } from "zod";
+import { GITHUB_URL_REGEX } from "./schema";
 import type { DeployJob } from "./types";
 
 // Stream entries are flat lists of strings: ["id", "abc", "repoUrl", "https://…", …].
 // Both sides convert through these helpers so the format lives in one place.
 
+// Strict on purpose: the worker turns these values into a download URL and a
+// container name, so anything unexpected is rejected before it gets that far.
 const deployJobSchema = z.object({
-  id: z.string(),
-  repoUrl: z.string(),
-  sha: z.string(),
+  id: z.string().regex(/^[0-9a-z]{10}$/),
+  repoUrl: z.string().regex(GITHUB_URL_REGEX),
+  sha: z.string().regex(/^[0-9a-f]{40}$/),
 });
 
 export function toStreamFields(job: DeployJob): string[] {

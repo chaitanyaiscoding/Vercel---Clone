@@ -1,3 +1,8 @@
+/**
+ * upload-service entry point.
+ * Checks Redis is reachable, builds the Express app (CORS, JSON body limit,
+ * routes, error handler), starts listening, and shuts down cleanly on SIGINT/SIGTERM.
+ */
 import cors from "cors";
 import express from "express";
 import { env } from "./env";

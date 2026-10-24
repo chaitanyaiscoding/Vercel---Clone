@@ -1,3 +1,8 @@
+/**
+ * Publishes deploy jobs to the Redis stream.
+ * enqueueDeployment() saves the deployment record and XADDs the job in a single
+ * MULTI/EXEC transaction, so a record never exists without its job (or vice versa).
+ */
 import { DEPLOY_STREAM, DEPLOY_STREAM_MAXLEN, deploymentKey, toStreamFields, type Deployment } from "@repo/shared";
 import { redis } from "./redis";
 

@@ -7,13 +7,19 @@
     "dev": "tsx watch --env-file=.env src/index.ts",
     "build": "tsup",
     "start": "node --env-file=.env dist/index.js",
-    "check-types": "tsc"
+    "check-types": "tsc",
+    "builder:build": "docker build -t vercel-clone-builder builder"
   },
   "dependencies": {
-    "@repo/shared": "workspace:*"
+    "@aws-sdk/client-s3": "^3.1156.0",
+    "@repo/shared": "workspace:*",
+    "ioredis": "^6.0.0",
+    "mime-types": "^3.0.2",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
+    "@types/mime-types": "^3.0.1",
     "@types/node": "^24",
     "tsup": "^8",
     "tsx": "^4",

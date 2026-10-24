@@ -1,3 +1,8 @@
+/**
+ * Loads and validates environment variables with zod at boot.
+ * Exits the process with a readable error if config is missing or malformed,
+ * and exports a typed `env` object for the rest of the service.
+ */
 import { z } from "zod";
 
 // Validate config once at boot so a bad .env crashes immediately with a clear

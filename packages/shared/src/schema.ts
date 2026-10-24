@@ -1,3 +1,8 @@
+/**
+ * Zod schemas for validating user input.
+ * The deploy request schema is shared so the frontend (Phase 4) can validate
+ * the GitHub URL with exactly the same rules the server enforces.
+ */
 import { z } from "zod";
 
 export const GITHUB_URL_REGEX =

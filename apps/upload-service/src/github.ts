@@ -1,3 +1,8 @@
+/**
+ * GitHub REST API client.
+ * Parses github.com URLs into owner/repo, fetches repo metadata (public? size? default branch)
+ * and resolves the branch to an exact commit SHA. Maps GitHub failures to HttpErrors.
+ */
 import { z } from "zod";
 import { GITHUB_URL_REGEX } from "@repo/shared";
 import { env } from "./env";
@@ -50,7 +55,7 @@ async function githubGet<T>(path: string, schema: z.ZodType<T>): Promise<T> {
   if (!res.ok) throw new HttpError(502, `GitHub API error (${res.status})`);
 
   const parsed = schema.safeParse(await res.json());
-  if (!parsed.success) throw new HttpError(502, "Unexpected response from GitHub");
+  if (!parsed.success) throw new HttpError(502, "Unexpected response froKm GitHub");
   return parsed.data;
 }
 
@@ -61,5 +66,6 @@ export function getRepoInfo(owner: string, repo: string): Promise<RepoInfo> {
 // Resolve a branch name to the exact commit it points at right now
 export async function getLatestSha(owner: string, repo: string, branch: string): Promise<string> {
   const commit = await githubGet(`/repos/${owner}/${repo}/commits/${encodeURIComponent(branch)}`, commitSchema);
+  console.log(` -------- upload-service] resolved ${owner}/${repo}@${branch} → ${commit.sha} ------------------`);
   return commit.sha;
 }

@@ -1,3 +1,8 @@
+/**
+ * Error handling for the HTTP API.
+ * HttpError carries a status code + client-safe message; errorHandler is the
+ * Express middleware that turns thrown errors into JSON responses without leaking internals.
+ */
 import type { ErrorRequestHandler } from "express";
 
 // Throw this anywhere in a handler; its message is safe to show the client.
